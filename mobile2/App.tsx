@@ -3,7 +3,8 @@ import {NativeBaseProvider, extendTheme} from 'native-base';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
-import WelcomeScreen from './src/screens/WelcomeScreen';
+import SignInScreen from './src/screens/SignIn';
+import SignUpScreen from './src/screens/SignUp';
 
 const Stack = createNativeStackNavigator();
 
@@ -85,7 +86,8 @@ export default function App(): JSX.Element {
     <NativeBaseProvider theme={theme}>
       <NavigationContainer>
         <Stack.Navigator screenOptions={{headerShown: false}}>
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
+          <Stack.Screen name="SignIn" component={SignInScreen} />
+          <Stack.Screen name="SignUp" component={SignUpScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </NativeBaseProvider>

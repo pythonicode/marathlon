@@ -8,29 +8,39 @@ import {
   Link,
   HStack,
   Text,
-  Divider,
 } from 'native-base';
 import {useForm} from 'react-hook-form';
+import {useState} from 'react';
+import {Alert} from 'react-native';
 import {supabase} from '../lib/supabase';
 
 type FormData = {
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
-export default function WelcomeScreen() {
+export default function SignUpScreen({navigation}: {navigation: any}) {
   const {handleSubmit, register, setValue} = useForm<FormData>();
 
-  const onSubmit = (data: FormData) => {
-    console.log(data);
-  };
+  const [loading, setLoading] = useState(false);
 
-  const signInWithGoogle = async () => {
-    console.log("YO");
-    let {data, error} = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+  const onSubmit = async (data: FormData) => {
+    if (data.password !== data.confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    setLoading(true);
+    const {error} = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
     });
-    console.log(data, error);
+
+    if (error) {
+      Alert.alert(error.name, error.message);
+    }
+    setLoading(false);
   };
 
   return (
@@ -43,17 +53,6 @@ export default function WelcomeScreen() {
       <Center>
         <Image source={require('../assets/logo.png')} alt="Marathlon Logo" />
       </Center>
-      <Button variant="outline" w="xs" onPress={signInWithGoogle}>
-        <HStack space={4} alignItems="center">
-          <Image
-            source={require('../assets/auth/google.png')}
-            alt="Google Logo"
-            size={6}
-          />
-          <Text fontSize="md">Sign in with Google</Text>
-        </HStack>
-      </Button>
-      <Divider width="80%" />
       <Input
         placeholder="Email"
         w="xs"
@@ -77,14 +76,33 @@ export default function WelcomeScreen() {
             shouldTouch: true,
           })
         }
+        disabled={loading}
         {...register('password')}
       />
-      <Button bgColor="primary.500" w="xs" onPress={handleSubmit(onSubmit)}>
-        Sign in
+      <Input
+        type="password"
+        placeholder="Confirm Password"
+        w="xs"
+        onChangeText={(v: string) =>
+          setValue('confirmPassword', v, {
+            shouldValidate: true,
+            shouldDirty: true,
+            shouldTouch: true,
+          })
+        }
+        disabled={loading}
+        {...register('confirmPassword')}
+      />
+      <Button
+        bgColor="primary.500"
+        w="xs"
+        disabled={loading}
+        onPress={handleSubmit(onSubmit)}>
+        Sign up
       </Button>
       <HStack justifyContent="center" space={2}>
-        <Text color="gray.500">Don't have an account?</Text>
-        <Link>Sign up</Link>
+        <Text color="gray.500">Already have an account?</Text>
+        <Link onPress={() => navigation.navigate('SignIn')}>Sign in</Link>
       </HStack>
     </VStack>
   );

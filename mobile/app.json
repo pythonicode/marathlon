@@ -1,4 +1,37 @@
 {
-  "name": "marathlon",
-  "displayName": "marathlon"
+  "expo": {
+    "name": "marathlon",
+    "slug": "marathlon",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/logo.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/logo.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "marathlon",
+    "extra": {
+      "eas": {
+        "projectId": "762e7171-f0ec-4a8d-9b22-97972426fb96"
+      }
+    },
+    "owner": "pythonic"
+  }
 }

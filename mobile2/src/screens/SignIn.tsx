@@ -9,28 +9,58 @@ import {
   HStack,
   Text,
   Divider,
+  Spinner,
 } from 'native-base';
 import {useForm} from 'react-hook-form';
+import {useState} from 'react';
+import {Alert} from 'react-native';
 import {supabase} from '../lib/supabase';
+import * as Linking from 'expo-linking';
+import {startAsync} from 'expo-auth-session';
 
 type FormData = {
   email: string;
   password: string;
 };
 
-export default function WelcomeScreen() {
+export default function SignInScreen({navigation}: {navigation: any}) {
   const {handleSubmit, register, setValue} = useForm<FormData>();
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = (data: FormData) => {
-    console.log(data);
+  const onSubmit = async (data: FormData) => {
+    setLoading(true);
+    const {error} = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    });
+
+    console.log(error);
+
+    if (error) {
+      Alert.alert(error.name, error.message);
+    }
+    setLoading(false);
   };
 
   const signInWithGoogle = async () => {
-    console.log("YO");
-    let {data, error} = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+    const returnUrl = Linking.createURL('/auth/callback');
+
+    const payload = (await startAsync({
+      authUrl: `https://iamkkwctfcaayfxjxyhu.supabase.co/auth/v1/authorize?provider=google&redirect_to=${returnUrl}`,
+      returnUrl,
+    })) as {
+      type: string;
+      params: {access_token: string; refresh_token: string};
+    };
+
+    const {access_token, refresh_token} = payload.params;
+
+    const response = await supabase.auth.setSession({
+      access_token,
+      refresh_token,
     });
-    console.log(data, error);
+
+    console.log(response);
   };
 
   return (
@@ -43,7 +73,11 @@ export default function WelcomeScreen() {
       <Center>
         <Image source={require('../assets/logo.png')} alt="Marathlon Logo" />
       </Center>
-      <Button variant="outline" w="xs" onPress={signInWithGoogle}>
+      <Button
+        disabled={loading}
+        variant="outline"
+        w="xs"
+        onPress={signInWithGoogle}>
         <HStack space={4} alignItems="center">
           <Image
             source={require('../assets/auth/google.png')}
@@ -55,6 +89,7 @@ export default function WelcomeScreen() {
       </Button>
       <Divider width="80%" />
       <Input
+        disabled={loading}
         placeholder="Email"
         w="xs"
         onChangeText={(v: string) =>
@@ -67,6 +102,7 @@ export default function WelcomeScreen() {
         {...register('email')}
       />
       <Input
+        disabled={loading}
         type="password"
         placeholder="Password"
         w="xs"
@@ -79,12 +115,16 @@ export default function WelcomeScreen() {
         }
         {...register('password')}
       />
-      <Button bgColor="primary.500" w="xs" onPress={handleSubmit(onSubmit)}>
-        Sign in
+      <Button
+        disabled={loading}
+        bgColor="primary.500"
+        w="xs"
+        onPress={handleSubmit(onSubmit)}>
+        {loading ? <Spinner /> : 'Sign in'}
       </Button>
       <HStack justifyContent="center" space={2}>
         <Text color="gray.500">Don't have an account?</Text>
-        <Link>Sign up</Link>
+        <Link onPress={() => navigation.navigate('SignUp')}>Sign up</Link>
       </HStack>
     </VStack>
   );
