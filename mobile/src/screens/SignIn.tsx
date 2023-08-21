@@ -23,7 +23,6 @@ import { NavigationStackParamList } from '../../App';
 
 type FormData = {
   email: string;
-  password: string;
 };
 
 export default function SignInScreen({ navigation }: NativeStackScreenProps<NavigationStackParamList, 'signin'>) {
@@ -32,15 +31,16 @@ export default function SignInScreen({ navigation }: NativeStackScreenProps<Navi
 
   const onSubmit = async (data: FormData) => {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
+    const { error } = await supabase.auth.signInWithOtp({
+      email: data.email
     });
 
     if (error) {
       Alert.alert(error.name, error.message);
     }
     setLoading(false);
+
+    navigation.push('verify', { email: data.email });
   };
 
   const signInWithGoogle = async () => {
@@ -72,7 +72,6 @@ export default function SignInScreen({ navigation }: NativeStackScreenProps<Navi
     }
 
     navigation.replace('onboarding', { step: 0 });
-
   };
 
   return (
@@ -83,7 +82,7 @@ export default function SignInScreen({ navigation }: NativeStackScreenProps<Navi
         justifyContent="center"
         alignItems="center"
         height="full">
-        <Center>
+        <Center marginBottom="4">
           <Image source={require('../assets/logo.png')} alt="Marathlon Logo" size={50} />
         </Center>
         <Button
@@ -103,7 +102,7 @@ export default function SignInScreen({ navigation }: NativeStackScreenProps<Navi
         <Divider width="80%" />
         <Input
           isDisabled={loading}
-          placeholder="Email"
+          placeholder="Email Address"
           w="xs"
           onChangeText={(v: string) =>
             setValue('email', v, {
@@ -114,30 +113,12 @@ export default function SignInScreen({ navigation }: NativeStackScreenProps<Navi
           }
           {...register('email')}
         />
-        <Input
-          isDisabled={loading}
-          type="password"
-          placeholder="Password"
-          w="xs"
-          onChangeText={(v: string) =>
-            setValue('password', v, {
-              shouldValidate: true,
-              shouldDirty: true,
-              shouldTouch: true,
-            })
-          }
-          {...register('password')}
-        />
         <Button
           bgColor="primary.500"
           w="xs"
           onPress={handleSubmit(onSubmit)}>
-          {loading ? <Spinner /> : 'Sign in'}
+          {loading ? <Spinner /> : 'Sign In'}
         </Button>
-        <HStack justifyContent="center" space={2}>
-          <Text color="gray.500">Don't have an account?</Text>
-          <Link onPress={() => navigation.navigate('signup')}>Sign up</Link>
-        </HStack>
       </VStack>
     </FormControl>
   );

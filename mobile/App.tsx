@@ -79,13 +79,12 @@ const theme = extendTheme({
 });
 
 import SignInScreen from './src/screens/SignIn';
-import SignUpScreen from './src/screens/SignUp';
 import OnboardingScreen from './src/screens/Onboarding';
-import { PropagateLoader } from 'react-spinners';
+import VerifyScreen from './src/screens/Verify';
 
 export type NavigationStackParamList = {
   signin: undefined;
-  signup: undefined;
+  verify: { email: string };
   onboarding: { step: number };
 };
 
@@ -106,7 +105,7 @@ export default function App(): JSX.Element {
         <NavigationContainer>
           <Stack.Navigator initialRouteName={session ? 'onboarding' : 'signin'} screenOptions={{ headerShown: false }}>
             <Stack.Screen name="signin" component={SignInScreen} />
-            <Stack.Screen name="signup" component={SignUpScreen} />
+            <Stack.Screen name="verify" component={VerifyScreen} />
             <Stack.Screen name="onboarding" component={OnboardingScreen} initialParams={{ step: 0 }} />
           </Stack.Navigator>
         </NavigationContainer>

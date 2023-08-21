@@ -15,7 +15,7 @@ export default function OnboardingScreen({ navigation, route }: NativeStackScree
                 height="full">
                 <VStack justifyContent="center" alignItems="center">
                     <Text fontSize="2xl" fontWeight="bold">Integrations</Text>
-                    <Text color="gray.500" fontSize="md" textAlign="center">Connect below to jumpstart your account</Text>
+                    <Text color="gray.500" fontSize="sm" textAlign="center">Connect to a service for quickstart</Text>
                 </VStack>
                 <Button width="xs" height="16" backgroundColor="orange.500">
                     <HStack space={2} alignItems="center">
