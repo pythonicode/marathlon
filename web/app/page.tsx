@@ -255,7 +255,7 @@ function SampleConversation() {
         Coach Anthony
       </CardTitle>
       <div className='flex gap-2 items-center'>
-        <div className="w-2 h-2 bg-green-500 rounded-full" />
+        <div className="w-2 h-2 bg-pink-500 rounded-full" />
         <p className='text-sm text-neutral-400 font-normal'>Online Now</p>
       </div>
     </CardHeader>
@@ -297,7 +297,8 @@ export default function Home() {
     <DefaultLayout>
       <section className="grid grid-cols-1 lg:grid-cols-2 max-w-8xl w-5/6 h-tall mx-auto">
         <div className="flex flex-col items-center justify-center h-full">
-          <h2 className="cursor-default relative text-5xl md:text-6xl lg:text-8xl font-black text-center uppercase my-8">COACHING <br /> DESIGNED <br /> FOR YOU
+          <h2 className="cursor-default relative text-5xl md:text-6xl lg:text-8xl font-black text-center uppercase my-8">COACHING <br /> DESIGNED <br /> FOR <span
+            className="text-transparent bg-clip-text bg-gradient-to-tr from-pink-600 to-pink-500 border-b-8 border-b-neutral-900">YOU</span>
             <Strokes />
           </h2>
         </div>
