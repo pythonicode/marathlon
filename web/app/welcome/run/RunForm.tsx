@@ -16,16 +16,19 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Checkbox } from "@/components/ui/checkbox";
-import Link from "next/link";
 
 import useFormPersist from 'react-hook-form-persist';
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
 import { feetToMeters, kmToMeters, metersPerSecondToKilometerPace, metersPerSecondToMilePace, metersToFeet, metersToKm, metersToMiles, milesToMeters } from "@/lib/conversion";
 import { useUnits } from "@/components/providers/units";
 import { useTrainingZones } from "@/lib/run";
-import { ArrowLeft, ArrowLeftIcon, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarIcon } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { format, isValid } from "date-fns";
 
 const schema = zod.object({
     training_goals: zod.array(zod.string()).nonempty(),
@@ -38,10 +41,19 @@ const schema = zod.object({
         "saturday",
         "sunday",
     ])).min(3).max(7),
-    training_volume: zod.coerce.number().min(0).max(240000, { message: "Too much training, please input a lower number." }),
-    training_vert: zod.coerce.number().min(0).max(20000, { message: "Too much climb, please input a lower number." }).optional(),
-    vdot: zod.coerce.number().min(0).max(100, { message: "VDOT must be between 0 and 100." }),
+    training_volume: zod.coerce.number().min(0).max(1000000, { message: "Please input a valid amount" }),
+    training_vert: zod.coerce.number().min(0).max(100000, { message: "Please input a valid amount" }).optional(),
+    vdot: zod.coerce.number().min(0).max(100, { message: "VDOT must be between 0 and 100" }),
+    prefers_track: zod.number().min(1).max(5),
+    goal_race: zod.object({
+        name: zod.string(),
+        date: zod.date(),
+        distance: zod.coerce.number().min(1, { message: "Please input a valid race distance" }).max(1000000, { message: "Please input a valid race distance" }),
+        time: zod.number().min(1, { message: "Please input a valid time greater than 0" }).max(1000000, { message: "Please input a valid time" }),
+        priority: zod.number().min(1).max(3)
+    })
 });
+
 
 const goals = [
     {
@@ -102,9 +114,9 @@ const days = [
 ] as const;
 
 
-export default function RunForm({ step }: { step: number }) {
+export default function RunForm({ step, onSubmit }: { step: number, schema?: zod.ZodObject<zod.ZodRawShape>, onSubmit?: (formData: FormData) => void }) {
     const router = useRouter();
-    const { units, toggleUnits } = useUnits();
+    const { units } = useUnits();
 
     const form = useForm<zod.infer<typeof schema>>({
         resolver: resolver(schema),
@@ -121,23 +133,28 @@ export default function RunForm({ step }: { step: number }) {
             ],
             training_volume: 10000,
             vdot: 40,
+            prefers_track: 3,
+            goal_race: {
+                distance: 0,
+                time: 0,
+                priority: 2
+            }
         },
     });
 
     useFormPersist("form", {
         watch: form.watch,
         setValue: form.setValue,
-        storage: typeof window !== "undefined" ? window.localStorage : undefined
+        storage: typeof window !== "undefined" ? window.localStorage : undefined,
+        exclude: ["goal_race.date"]
     });
 
     const zones = useTrainingZones(form.watch("vdot"));
 
-    const onSubmit = (data: zod.infer<typeof schema>) => {
-        console.log(data);
-    };
+
 
     return <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 w-full">
+        <form action={onSubmit} className="w-full flex flex-col gap-4">
             {
                 step === 1 && <>
                     <h1 className="text-center font-bold text-3xl lg:text-5xl">Goals</h1>
@@ -419,7 +436,213 @@ export default function RunForm({ step }: { step: number }) {
             }
             {
                 step == 5 && <>
-                    <h1 className="text-center font-bold text-3xl lg:text-5xl mb-4">Preferences</h1>
+                    <h1 className="text-center font-bold text-3xl lg:text-5xl mb-4">Workouts</h1>
+                    <FormField
+                        control={form.control}
+                        name="prefers_track"
+                        render={() => (
+                            <FormItem>
+                                <FormLabel>
+                                    Do you prefer doing workouts on the Track?
+                                </FormLabel>
+                                <FormControl>
+                                    <div className="flex flex-col gap-4 py-2">
+                                        <Slider
+                                            min={1}
+                                            max={5}
+                                            value={[form.watch("prefers_track")]}
+                                            onValueChange={(value) => form.setValue("prefers_track", value[0])}
+                                        />
+                                        <div className="grid grid-cols-3">
+                                            <div className="text-left">Never</div>
+                                            <div className="text-center">Neutral</div>
+                                            <div className="text-right">Always</div>
+                                        </div>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <Button onClick={
+                        async () => {
+                            const valid = await form.trigger("prefers_track");
+                            if (valid) router.push("/welcome/run?step=6");
+                        }} variant="secondary" className="w-full text-xl p-8">Continue</Button>
+
+                </>
+            }
+            {
+                step == 6 && <>
+                    <h1 className="text-center font-bold text-3xl lg:text-5xl mb-4">Race</h1>
+                    <p className="text-sm text-neutral-500">If you have a goal race that you are training for please fill out the following, you can always add more races later.    </p>
+                    <FormField
+                        control={form.control}
+                        name="goal_race.name"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>
+                                    Name
+                                </FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Western States 100" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="goal_race.date"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Date</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                    "text-left font-normal",
+                                                    !field.value && "text-muted-foreground"
+                                                )}
+                                            >
+                                                {field.value && isValid(field.value) ? (
+                                                    format(field.value, "PPP")
+                                                ) : (
+                                                    <span>Pick a date</span>
+                                                )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            disabled={(date) =>
+                                                date < new Date() || date > new Date("2100-01-01")
+                                            }
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="goal_race.distance"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>
+                                    Race Distance
+                                </FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="5"
+                                            {...field}
+                                        />
+                                        <div className="absolute inset-y-0 right-2 flex items-center">
+                                            <UnitsToggle />
+                                        </div>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="goal_race.time"
+                        render={() => (
+                            <FormItem>
+                                <FormLabel>
+                                    Goal Time
+                                </FormLabel>
+                                <FormControl>
+                                    <div className="flex items-center justify-evenly gap-2">
+                                        <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="HH"
+                                            value={form.watch("goal_race.time") >= 3600 ? Math.floor(form.watch("goal_race.time") / 3600) : ""}
+                                            onChange={(e) => {
+                                                const value = parseFloat(e.target.value);
+                                                if (Number.isNaN(value)) form.setValue("goal_race.time", form.getValues("goal_race.time") % 3600);
+                                                else form.setValue("goal_race.time", form.getValues("goal_race.time") % 3600 + value * 3600);
+                                            }}
+                                        />
+                                        <span>:</span>
+                                        <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="MM"
+                                            value={form.watch("goal_race.time") >= 60 ? `${Math.floor(form.watch("goal_race.time") / 60) % 60 < 10 ? "0" : ""}${Math.floor(form.watch("goal_race.time") / 60) % 60}` : ""}
+                                            onChange={(e) => {
+                                                const value = parseFloat(e.target.value);
+                                                if (Number.isNaN(value)) form.setValue("goal_race.time", Math.floor(form.getValues("goal_race.time") / 3600) * 3600
+                                                    + form.getValues("goal_race.time") % 60);
+                                                else if (value >= 60) return;
+                                                else form.setValue("goal_race.time", Math.floor(form.getValues("goal_race.time") / 3600) * 3600 + value * 60
+                                                    + form.getValues("goal_race.time") % 60);
+                                            }}
+                                        />
+                                        <span>:</span>
+                                        <Input
+                                            type="text"
+                                            inputMode="numeric"
+                                            placeholder="SS"
+                                            value={form.watch("goal_race.time") % 60 < 10 ? `0${form.watch("goal_race.time") % 60}` : form.watch("goal_race.time") % 60}
+                                            onChange={(e) => {
+                                                const value = parseFloat(e.target.value);
+                                                if (Number.isNaN(value)) form.setValue("goal_race.time", Math.floor(form.getValues("goal_race.time") / 3600) * 3600
+                                                    + Math.floor(form.getValues("goal_race.time") % 3600 / 60) * 60);
+                                                else if (value >= 60) return;
+                                                else form.setValue("goal_race.time", Math.floor(form.getValues("goal_race.time") / 3600) * 3600
+                                                    + Math.floor(form.getValues("goal_race.time") % 3600 / 60) * 60 + value);
+                                            }}
+                                        />
+                                    </div>
+
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="goal_race.priority"
+                        render={() => (
+                            <FormItem>
+                                <FormLabel>
+                                    Priority
+                                </FormLabel>
+                                <FormControl>
+                                    <div className="flex flex-col gap-4 py-2">
+                                        <Slider
+                                            min={1}
+                                            max={3}
+                                            value={[form.watch("goal_race.priority")]}
+                                            onValueChange={(value) => form.setValue("goal_race.priority", value[0])}
+                                        />
+                                        <div className="flex justify-between">
+                                            <div className="text-left">Low</div>
+                                            <div className="text-right">High</div>
+                                        </div>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <Button type="submit"
+                        variant="secondary" className="w-full text-xl p-8">Finish</Button>
                 </>
             }
         </form>
